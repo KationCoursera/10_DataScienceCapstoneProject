@@ -1,0 +1,96 @@
+---
+title: "Milestone Report - Data Science Capstone Project (Predictive text mining)"
+author: "Jure Bordon"
+date: "Tuesday, December 29, 2015"
+fontsize: 10pt
+---
+
+# Summary
+
+This report is made for Capstone project course from the Data Science signature track by Johns Hopkins University. Our goal is to load the data, take a look at it and report on any interesting conclusions we managed to make.
+
+```{r,echo=FALSE,cache=FALSE,results='hide',warning=FALSE,message=FALSE}
+library(tm)
+library(ggplot2)
+```
+
+# Data setup
+
+Lets look at all three files and check their line and word counts to get a feeling what kind of data are we dealing with:
+
+```{r,warning=FALSE}
+en_US.blogs <- readLines("F:/documents/dev/R/10_DataScienceCapstoneProject/data/en_US/en_US.blogs.txt")
+en_US.twitter <- readLines("F:/documents/dev/R/10_DataScienceCapstoneProject/data/en_US/en_US.twitter.txt")
+en_US.news <- readLines("F:/documents/dev/R/10_DataScienceCapstoneProject/data/en_US/en_US.news.txt")
+
+length(en_US.blogs)
+
+length(en_US.twitter)
+
+length(en_US.news)
+```
+
+We can see that the number of lines for blogs, twitter and news texts are 899288, 2360148 and 77259, respectively. We will take only a sample of those lines for the analysis to avoid any memory and computation constraints.
+
+```{r}
+# Take a sample of 10% of each
+
+sample_size <- 0.10
+
+en_US.blogs.sample <- sample(en_US.blogs,size=length(en_US.blogs)*sample_size,replace=FALSE)
+en_US.twitter.sample <- sample(en_US.twitter,size=length(en_US.twitter)*sample_size,replace=FALSE)
+en_US.news.sample <- sample(en_US.news,size=length(en_US.news)*sample_size,replace=FALSE)
+```
+
+We save them to another folder so we can then create a corpus from all three sample files:
+
+```{r}
+writeLines(en_US.news.sample,"F:/documents/dev/R/10_DataScienceCapstoneProject/data/en_US/samples/en_US.news.sample.txt")
+writeLines(en_US.twitter.sample,"F:/documents/dev/R/10_DataScienceCapstoneProject/data/en_US/samples/en_US.twitter.sample.txt")
+writeLines(en_US.blogs.sample,"F:/documents/dev/R/10_DataScienceCapstoneProject/data/en_US/samples/en_US.blogs.sample.txt")
+```
+
+Construct a corpus from all files:
+
+```{r}
+corpus <- Corpus(DirSource("F:/documents/dev/R/10_DataScienceCapstoneProject/data/en_US/samples"), readerControl = list(language="english"))
+```
+
+Clean the corpus by removing punctuation, numbers, whitespaces, make all letters lower case and remove stop words from english language (is, are, ...). We might need these for building a model later, since we want to predict them as well, but for some basic analysis, we can remove them.
+
+```{r}
+corpus <- tm_map(corpus,removeNumbers)
+corpus <- tm_map(corpus,removePunctuation)
+corpus <- tm_map(corpus,stripWhitespace)
+corpus <- tm_map(corpus,tolower)
+corpus <- tm_map(corpus,removeWords,stopwords("english"))
+corpus <- tm_map(corpus,PlainTextDocument)
+```
+
+# Generating Document Term Matrix and analysing the results
+
+We first generate the document term matrix:
+
+```{r}
+dtm <- DocumentTermMatrix(corpus)
+```
+
+To calculate the frequencies of words, we convert it to a matrix and sum the columns:
+
+```{r}
+word_freq <- colSums(as.matrix(dtm))
+```
+
+# Results
+
+Plot the histograms of frequency of words for all three documents:
+
+```{r,echo=FALSE,warning=FALSE}
+qplot(word_freq, geom="histogram", binwidth=1.5) + xlim(0,50) + xlab("Words - news") + ylab("Word frequency")
+```
+
+We can see that most words come up only once or a couple of times at most. 
+
+# Future prediction goals
+
+Exploring the data made it clear that building this model will be a computationally complex problem. Even when reducing the sample size to half or quarter, the corpus building and building the document term matrix took too long. We will need to further clean the data and pick the sample size properly in order to make it possible to build a model. In addition, profanity words will need to be excluded before building the prediction model. We will attempt to build a basic n-gram model and build on it by exploring different efficiency optimizations, either by preprocessing or using different models. Further, the model will be built into a Shiny app and made available for testing.
